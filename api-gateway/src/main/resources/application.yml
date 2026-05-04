@@ -1,0 +1,88 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+
+        - id: course-service
+          uri: lb://course-service
+          predicates:
+            - Path=/api/v1/courses/**
+
+        - id: lesson-service
+          uri: lb://lesson-service
+          predicates:
+            - Path=/api/v1/lessons/**,/api/v1/resources/**
+
+        - id: enrollment-service
+          uri: lb://enrollment-service
+          predicates:
+            - Path=/api/v1/enrollments/**
+
+        - id: assessment-service
+          uri: lb://assessment-service
+          predicates:
+            - Path=/api/v1/quizzes/**,/api/v1/questions/**,/api/v1/attempts/**
+
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**,/api/v1/subscriptions/**
+
+        - id: progress-service
+          uri: lb://progress-service
+          predicates:
+            - Path=/api/v1/progress/**,/api/v1/certificates/**
+
+        - id: discussion-service
+          uri: lb://discussion-service
+          predicates:
+            - Path=/api/v1/threads/**,/api/v1/replies/**
+
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
