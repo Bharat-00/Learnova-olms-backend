@@ -11,8 +11,8 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/target/discovery-server-0.0.1-SNAPSHOT.jar discovery-server.jar
+COPY --from=builder /app/target/api-gateway-0.0.1-SNAPSHOT.jar api-gateway.jar
 
-EXPOSE 8761
+EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "discovery-server.jar"]
+ENTRYPOINT ["java", "-jar", "api-gateway.jar"]

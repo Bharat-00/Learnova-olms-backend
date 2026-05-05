@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  discovery-server:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    container_name: learnova-discovery-server
+    restart: always
+    ports:
+      - "8761:8761"
+    networks:
+      - learnova-network
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: learnova-api-gateway
+    restart: always
+    depends_on:
+      - discovery-server
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    networks:
+      - learnova-network
+
+  auth-mysql:
+    image: mysql:8.0
+    container_name: learnova-auth-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Bharat_007
+      MYSQL_DATABASE: learnova_auth_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - auth_mysql_data:/var/lib/mysql
+    networks:
+      - learnova-network
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: learnova-auth-service
+    restart: always
+    depends_on:
+      - discovery-server
+      - auth-mysql
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://auth-mysql:3306/learnova_auth_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Bharat_007
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    networks:
+      - learnova-network
+
+volumes:
+  auth_mysql_data:
+
+networks:
+  learnova-network:
+    driver: bridge
