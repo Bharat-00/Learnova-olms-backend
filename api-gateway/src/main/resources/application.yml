@@ -54,10 +54,10 @@ spring:
           predicates:
             - Path=/api/v1/lessons/**
 
-        - id: assessment-service
-          uri: lb://assessment-service
+        - id: assesment-service
+          uri: lb://assesment-service
           predicates:
-            - Path=/api/v1/quizzes/**,/api/v1/questions/**,/api/v1/attempts/**
+            - Path=/api/v1/quizzes/**,/api/v1/attempts/**
 
         - id: payment-service
           uri: lb://payment-service
