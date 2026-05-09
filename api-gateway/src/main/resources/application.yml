@@ -52,7 +52,7 @@ spring:
         - id: lesson-service
           uri: lb://lesson-service
           predicates:
-            - Path=/api/v1/lessons/**,/api/v1/resources/**
+            - Path=/api/v1/lessons/**
 
         - id: assessment-service
           uri: lb://assessment-service
