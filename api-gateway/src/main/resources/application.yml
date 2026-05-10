@@ -59,15 +59,15 @@ spring:
           predicates:
             - Path=/api/v1/quizzes/**,/api/v1/attempts/**
 
+        - id: progress-service
+          uri: lb://progress-service
+          predicates:
+            - Path=/api/v1/progress/**
+
         - id: payment-service
           uri: lb://payment-service
           predicates:
             - Path=/api/v1/payments/**,/api/v1/subscriptions/**
-
-        - id: progress-service
-          uri: lb://progress-service
-          predicates:
-            - Path=/api/v1/progress/**,/api/v1/certificates/**
 
         - id: discussion-service
           uri: lb://discussion-service
