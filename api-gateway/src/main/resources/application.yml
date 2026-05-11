@@ -13,7 +13,7 @@ spring:
           lower-case-service-id: true
 
       globalcors:
-        cors-configurations:
+        corsConfigurations:
           '[/**]':
             allowedOrigins:
               - "http://localhost:4200"
