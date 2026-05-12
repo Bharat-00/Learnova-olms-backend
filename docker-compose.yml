@@ -26,6 +26,28 @@ services:
     networks:
       - learnova-network
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: learnova-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - learnova-network
+
+  redis:
+    image: redis:7
+    container_name: learnova-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - learnova-network
+
   auth-mysql:
     image: mysql:8.0
     container_name: learnova-auth-mysql
@@ -333,6 +355,90 @@ services:
     networks:
       - learnova-network
 
+  notification-mysql:
+    image: mysql:8.0
+    container_name: learnova-notification-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Bharat_007
+      MYSQL_DATABASE: learnova_notification_db
+    ports:
+      - "3316:3306"
+    volumes:
+      - notification_mysql_data:/var/lib/mysql
+    networks:
+      - learnova-network
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: learnova-notification-service
+    restart: always
+    depends_on:
+      - discovery-server
+      - notification-mysql
+      - rabbitmq
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://notification-mysql:3306/learnova_notification_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Bharat_007
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      EUREKA_CLIENT_ENABLED: "true"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    networks:
+      - learnova-network
+
+  certificate-mysql:
+    image: mysql:8.0
+    container_name: learnova-certificate-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Bharat_007
+      MYSQL_DATABASE: learnova_certificate_db
+    ports:
+      - "3317:3306"
+    volumes:
+      - certificate_mysql_data:/var/lib/mysql
+    networks:
+      - learnova-network
+
+  certificate-service:
+    build:
+      context: ./certificate-service
+      dockerfile: Dockerfile
+    container_name: learnova-certificate-service
+    restart: always
+    depends_on:
+      - discovery-server
+      - certificate-mysql
+      - rabbitmq
+      - redis
+      - progress-service
+      - course-service
+      - user-service
+    ports:
+      - "8091:8091"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://certificate-mysql:3306/learnova_certificate_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Bharat_007
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_ENABLED: "true"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    networks:
+      - learnova-network
+
 volumes:
   auth_mysql_data:
   user_mysql_data:
@@ -343,6 +449,8 @@ volumes:
   progress_mysql_data:
   payment_mysql_data:
   discussion_mysql_data:
+  notification_mysql_data:
+  certificate_mysql_data:
 
 networks:
   learnova-network:
