@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 public interface EnrollmentClient {
 
     @PostMapping("/api/v1/enrollments/courses/{courseId}")
-    Object enrollInCourse(
+    void enrollInCourse(
             @PathVariable Long courseId,
             @RequestHeader("X-User-Email") String userEmail
     );
