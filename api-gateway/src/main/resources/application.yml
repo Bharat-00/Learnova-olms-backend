@@ -96,3 +96,6 @@ management:
     web:
       exposure:
         include: health,info,gateway
+
+        jwt:
+  secret: learnova_super_secret_key_for_jwt_validation_2026
