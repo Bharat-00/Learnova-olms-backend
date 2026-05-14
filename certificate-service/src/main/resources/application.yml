@@ -1,0 +1,65 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: certificate-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3317/learnova_certificate_db
+    username: root
+    password: Bharat_007
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+app:
+  jwt:
+    secret: learnova_super_secret_key_for_jwt_validation_2026
+
+  certificate:
+    storage-path: certificates
+
+rabbitmq:
+  exchange: learnova.exchange
+  certificate-queue: certificate.queue
+  certificate-routing-key: certificate.generated
+  notification-routing-key: notification.created
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.learnova.certificate: DEBUG
+

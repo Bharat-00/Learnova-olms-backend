@@ -1,0 +1,5 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.jdt.ls.vmargs": "-javaagent:C:/Users/Bharat/.vscode/extensions/redhat.java-1.54.0-win32-x64/lombok/lombok-1.18.39-4050.jar"
+}
