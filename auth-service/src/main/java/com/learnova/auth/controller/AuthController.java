@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,10 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Tag(name = "Auth Controller", description = "APIs for authentication and user identity")
+@Tag(
+        name = "Auth Controller",
+        description = "Authentication APIs"
+)
 public class AuthController {
 
     private final AuthService authService;
@@ -31,56 +35,72 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        log.info("Register request received for email={}", request.getEmail());
 
-        AuthResponse response = authService.register(request);
+        log.info(
+                "Register request received for email={}",
+                request.getEmail()
+        );
 
-        return ResponseEntity.status(201)
-                .body(
-                        ApiResponse.<AuthResponse>builder()
-                                .success(true)
-                                .message("User registered successfully")
-                                .data(response)
-                                .timestamp(LocalDateTime.now())
-                                .build()
-                );
+        AuthResponse response =
+                authService.register(request);
+
+        ApiResponse<AuthResponse> apiResponse =
+                ApiResponse.<AuthResponse>builder()
+                        .success(true)
+                        .message("User registered successfully")
+                        .data(response)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(apiResponse);
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login user and generate JWT token")
+    @Operation(summary = "Login user")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        log.info("Login request received for email={}", request.getEmail());
 
-        AuthResponse response = authService.login(request);
+        log.info(
+                "Login request received for email={}",
+                request.getEmail()
+        );
 
-        return ResponseEntity.ok(
+        AuthResponse response =
+                authService.login(request);
+
+        ApiResponse<AuthResponse> apiResponse =
                 ApiResponse.<AuthResponse>builder()
                         .success(true)
                         .message("Login successful")
                         .data(response)
                         .timestamp(LocalDateTime.now())
-                        .build()
-        );
+                        .build();
+
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get current logged-in user details")
+    @Operation(summary = "Get current user")
     public ResponseEntity<ApiResponse<UserInfoResponse>> getCurrentUser(
             Authentication authentication
     ) {
+
         String email = authentication.getName();
 
-        UserInfoResponse response = authService.getCurrentUser(email);
+        UserInfoResponse response =
+                authService.getCurrentUser(email);
 
-        return ResponseEntity.ok(
+        ApiResponse<UserInfoResponse> apiResponse =
                 ApiResponse.<UserInfoResponse>builder()
                         .success(true)
                         .message("Current user fetched successfully")
                         .data(response)
                         .timestamp(LocalDateTime.now())
-                        .build()
-        );
+                        .build();
+
+        return ResponseEntity.ok(apiResponse);
     }
 }
