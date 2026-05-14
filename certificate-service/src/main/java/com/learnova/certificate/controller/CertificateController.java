@@ -1,64 +1,104 @@
 package com.learnova.certificate.controller;
 
-import java.io.File;
-import java.util.List;
-
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import com.learnova.certificate.dto.ApiResponse;
 import com.learnova.certificate.dto.CertificateRequest;
 import com.learnova.certificate.entity.Certificate;
 import com.learnova.certificate.service.CertificateService;
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Slf4j
 @RestController
-@RequestMapping("/api/certificates")
 @RequiredArgsConstructor
+@RequestMapping("/api/certificates")
+@Tag(name = "Certificate Controller", description = "APIs for certificate management")
 public class CertificateController {
 
     private final CertificateService certificateService;
 
     @PostMapping("/generate")
-    public ResponseEntity<Certificate> generateCertificate(
+    @Operation(summary = "Generate course completion certificate")
+    public ResponseEntity<ApiResponse<Certificate>> generateCertificate(
             @Valid @RequestBody CertificateRequest request
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(certificateService.generateCertificate(request));
+
+        log.info("Generating certificate for userId={} and courseId={}",
+                request.getUserId(),
+                request.getCourseId());
+
+        Certificate certificate =
+                certificateService.generateCertificate(request);
+
+        return ResponseEntity.status(201)
+                .body(
+                        ApiResponse.<Certificate>builder()
+                                .success(true)
+                                .message("Certificate generated successfully")
+                                .data(certificate)
+                                .timestamp(LocalDateTime.now())
+                                .build()
+                );
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Certificate>> getCertificatesByUserId(
+    @Operation(summary = "Get certificates by user ID")
+    public ResponseEntity<ApiResponse<List<Certificate>>> getCertificatesByUserId(
             @PathVariable Long userId
     ) {
-        return ResponseEntity.ok(certificateService.getCertificatesByUserId(userId));
+
+        List<Certificate> certificates =
+                certificateService.getCertificatesByUserId(userId);
+
+        return ResponseEntity.ok(
+                ApiResponse.<List<Certificate>>builder()
+                        .success(true)
+                        .message("Certificates fetched successfully")
+                        .data(certificates)
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
     }
 
     @GetMapping("/download/{certificateId}")
+    @Operation(summary = "Download certificate PDF")
     public ResponseEntity<Resource> downloadCertificate(
             @PathVariable Long certificateId
-    ) {
-        Certificate certificate = certificateService.getCertificateById(certificateId);
+    ) throws Exception {
 
-        File file = new File(certificate.getFilePath());
-        Resource resource = new FileSystemResource(file);
+        Certificate certificate =
+                certificateService.getCertificateById(certificateId);
+
+        Path filePath = Path.of(certificate.getFilePath());
+
+        Resource resource =
+                new org.springframework.core.io.UrlResource(filePath.toUri());
+
+        String contentType =
+                Files.probeContentType(filePath);
+
+        if (contentType == null) {
+            contentType = "application/pdf";
+        }
 
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(MediaType.parseMediaType(contentType))
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + certificate.getFileName() + "\""
+                        "attachment; filename=\"" +
+                                certificate.getFileName() + "\""
                 )
                 .body(resource);
     }

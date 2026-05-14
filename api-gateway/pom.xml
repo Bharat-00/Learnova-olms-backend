@@ -8,15 +8,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
-        <relativePath/>
-    </parent>
+    <groupId>com.learnova</groupId>
+    <artifactId>learnova-olms-backend</artifactId>
+    <version>1.0.0</version>
+</parent>
 
     <groupId>com.learnova</groupId>
     <artifactId>api-gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+
+    <name>api-gateway</name>
+    <description>Learnova API Gateway</description>
 
     <properties>
         <java.version>17</java.version>
@@ -40,6 +42,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
         <dependency>
@@ -70,6 +77,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
@@ -78,9 +91,7 @@
     </dependencies>
 
     <dependencyManagement>
-
         <dependencies>
-
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -88,33 +99,27 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
         </dependencies>
-
     </dependencyManagement>
 
     <build>
+        <finalName>api-gateway</finalName>
 
         <plugins>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-
                 <configuration>
-
+                    <release>17</release>
                     <annotationProcessorPaths>
-
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
-
                     </annotationProcessorPaths>
-
                 </configuration>
-
             </plugin>
 
             <plugin>
@@ -123,7 +128,6 @@
             </plugin>
 
         </plugins>
-
     </build>
 
 </project>

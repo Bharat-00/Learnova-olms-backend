@@ -7,15 +7,15 @@ import lombok.Data;
 @Data
 public class CertificateRequest {
 
-    @NotNull
+    @NotNull(message = "User ID is required")
     private Long userId;
 
-    @NotNull
+    @NotNull(message = "Course ID is required")
     private Long courseId;
 
-    @NotBlank
+    @NotBlank(message = "Student name is required")
     private String studentName;
 
-    @NotBlank
+    @NotBlank(message = "Course title is required")
     private String courseTitle;
 }
