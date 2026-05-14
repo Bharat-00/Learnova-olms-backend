@@ -99,3 +99,26 @@ management:
 
         jwt:
   secret: learnova_super_secret_key_for_jwt_validation_2026
+
+  logging:
+  level:
+    root: INFO
+    com.learnova: DEBUG
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%level] [%thread] %logger{36} - %msg%n"
+
+
+  management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+  info:
+    env:
+      enabled: true
