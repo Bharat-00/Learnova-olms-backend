@@ -18,6 +18,8 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long userId;
+
     private String userEmail;
 
     private String title;
@@ -34,7 +36,11 @@ public class Notification {
 
     @PrePersist
     public void onCreate() {
-        this.readStatus = false;
-        this.createdAt = LocalDateTime.now();
+
+        if (readStatus == null) {
+            readStatus = false;
+        }
+
+        createdAt = LocalDateTime.now();
     }
 }
