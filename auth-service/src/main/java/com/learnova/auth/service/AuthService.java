@@ -12,9 +12,11 @@ import com.learnova.auth.exception.UnauthorizedException;
 import com.learnova.auth.repository.UserRepository;
 import com.learnova.auth.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -27,7 +29,10 @@ public class AuthService {
 
         String email = request.getEmail().toLowerCase().trim();
 
+        log.info("Registering new user with email={}", email);
+
         if (userRepository.existsByEmail(email)) {
+            log.warn("Registration failed. Email already exists={}", email);
             throw new BadRequestException("Email already registered");
         }
 
@@ -38,9 +43,14 @@ public class AuthService {
                 .role(Role.USER)
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(
+                savedUser.getEmail(),
+                savedUser.getRole().name()
+        );
+
+        log.info("User registered successfully with id={}", savedUser.getId());
 
         return new AuthResponse(token);
     }
@@ -49,25 +59,39 @@ public class AuthService {
 
         String email = request.getEmail().toLowerCase().trim();
 
+        log.info("Login attempt for email={}", email);
+
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+                .orElseThrow(() -> {
+                    log.warn("Login failed. Email not found={}", email);
+                    return new UnauthorizedException("Invalid email or password");
+                });
 
         boolean isPasswordValid =
                 passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!isPasswordValid) {
+            log.warn("Login failed. Invalid password for email={}", email);
             throw new UnauthorizedException("Invalid email or password");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(
+                user.getEmail(),
+                user.getRole().name()
+        );
+
+        log.info("Login successful for email={}", email);
 
         return new AuthResponse(token);
     }
 
     public UserInfoResponse getCurrentUser(String email) {
 
+        log.info("Fetching current user for email={}", email);
+
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
 
         return new UserInfoResponse(
                 user.getId(),
