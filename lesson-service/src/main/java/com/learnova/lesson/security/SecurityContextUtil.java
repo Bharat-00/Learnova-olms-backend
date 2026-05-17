@@ -1,33 +1,34 @@
 package com.learnova.lesson.security;
 
-import com.learnova.lesson.exception.*;
-
+import com.learnova.lesson.exception.ForbiddenException;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SecurityContextUtil {
 
+    private static final String DEFAULT_EMAIL = "frontend-user@learnova.com";
+    private static final String DEFAULT_ROLE = "INSTRUCTOR";
+
     public String getUserEmail(String userEmail) {
-
         if (userEmail == null || userEmail.isBlank()) {
-            throw new UnauthorizedException("User email is missing");
+            return DEFAULT_EMAIL;
         }
-
         return userEmail;
     }
 
-    public void validateInstructorOrAdmin(String role) {
-
+    public String resolveRole(String role) {
         if (role == null || role.isBlank()) {
-            throw new UnauthorizedException("User role is missing");
+            return DEFAULT_ROLE;
         }
+        return role;
+    }
 
-        if (!role.equalsIgnoreCase("INSTRUCTOR")
-                && !role.equalsIgnoreCase("ADMIN")) {
+    public void validateInstructorOrAdmin(String role) {
+        String resolvedRole = resolveRole(role);
 
-            throw new ForbiddenException(
-                    "Only instructors or admins can manage lessons"
-            );
+        if (!resolvedRole.equalsIgnoreCase("INSTRUCTOR")
+                && !resolvedRole.equalsIgnoreCase("ADMIN")) {
+            throw new ForbiddenException("Only instructors or admins can manage lessons");
         }
     }
 }

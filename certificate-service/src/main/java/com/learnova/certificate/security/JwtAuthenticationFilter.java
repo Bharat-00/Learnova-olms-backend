@@ -23,12 +23,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return path.startsWith("/api/v1/certificates")
+                || path.startsWith("/api/certificates")
+                || path.startsWith("/actuator")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.equals("/swagger-ui.html");
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -44,24 +55,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Claims claims = jwtService.extractAllClaims(token);
-
         String username = claims.getSubject();
 
         Object roleClaim = claims.get("role");
-
         String role = roleClaim == null ? "USER" : roleClaim.toString();
 
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role;
+        }
+
         List<SimpleGrantedAuthority> authorities =
-                Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + role)
-                );
+                Collections.singletonList(new SimpleGrantedAuthority(role));
 
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        authorities
-                );
+                new UsernamePasswordAuthenticationToken(username, null, authorities);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 

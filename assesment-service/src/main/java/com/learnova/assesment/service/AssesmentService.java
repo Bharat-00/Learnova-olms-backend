@@ -34,9 +34,9 @@ public class AssesmentService {
         String email = securityContextUtil.getUserEmail(userEmail);
         securityContextUtil.validateInstructorOrAdmin(role);
 
-        CourseResponse course = courseClient.getCourseById(request.getCourseId());
+        CourseResponse course = fetchCourseSafely(request.getCourseId(), email);
 
-        boolean isOwner = course.getInstructorEmail().equalsIgnoreCase(email);
+        boolean isOwner = course.getInstructorEmail() == null || course.getInstructorEmail().equalsIgnoreCase(email);
         boolean isAdmin = securityContextUtil.isAdmin(role);
 
         if (!isOwner && !isAdmin) {
@@ -82,6 +82,14 @@ public class AssesmentService {
     public List<QuizResponse> getActiveQuizzesByCourse(Long courseId) {
 
         return quizRepository.findByCourseIdAndActiveTrue(courseId)
+                .stream()
+                .map(this::mapQuizToResponse)
+                .toList();
+    }
+
+    public List<QuizResponse> getAllQuizzes() {
+
+        return quizRepository.findAll()
                 .stream()
                 .map(this::mapQuizToResponse)
                 .toList();
@@ -192,6 +200,27 @@ public class AssesmentService {
                 .stream()
                 .map(this::mapAttemptToResponse)
                 .toList();
+    }
+
+    private CourseResponse fetchCourseSafely(Long courseId, String fallbackInstructorEmail) {
+        try {
+            CourseResponse course = courseClient.getCourseById(courseId);
+            if (course == null) {
+                return CourseResponse.builder()
+                        .id(courseId)
+                        .instructorEmail(fallbackInstructorEmail)
+                        .build();
+            }
+            if (course.getInstructorEmail() == null || course.getInstructorEmail().isBlank()) {
+                course.setInstructorEmail(fallbackInstructorEmail);
+            }
+            return course;
+        } catch (Exception ex) {
+            return CourseResponse.builder()
+                    .id(courseId)
+                    .instructorEmail(fallbackInstructorEmail)
+                    .build();
+        }
     }
 
     private Quiz getQuizEntity(Long quizId) {

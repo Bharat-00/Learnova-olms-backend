@@ -12,11 +12,13 @@ import java.time.LocalDateTime;
 public class CourseProgressResponse {
 
     private Long id;
+    private Long userId;
     private String userEmail;
     private Long courseId;
     private Integer totalLessons;
     private Integer completedLessons;
     private Double completionPercentage;
     private Boolean certificateEligible;
+    private Boolean completed;
     private LocalDateTime updatedAt;
 }

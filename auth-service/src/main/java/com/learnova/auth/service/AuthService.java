@@ -26,8 +26,7 @@ public class AuthService {
     private final JwtService jwtService;
 
     public AuthResponse register(RegisterRequest request) {
-
-        String email = request.getEmail().toLowerCase().trim();
+        String email = normalizeEmail(request.getEmail());
 
         log.info("Registering new user with email={}", email);
 
@@ -36,11 +35,13 @@ public class AuthService {
             throw new BadRequestException("Email already registered");
         }
 
+        Role role = resolveRole(request.getRole());
+
         User user = User.builder()
                 .name(request.getName().trim())
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
+                .role(role)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -56,8 +57,7 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-
-        String email = request.getEmail().toLowerCase().trim();
+        String email = normalizeEmail(request.getEmail());
 
         log.info("Login attempt for email={}", email);
 
@@ -67,10 +67,7 @@ public class AuthService {
                     return new UnauthorizedException("Invalid email or password");
                 });
 
-        boolean isPasswordValid =
-                passwordEncoder.matches(request.getPassword(), user.getPassword());
-
-        if (!isPasswordValid) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.warn("Login failed. Invalid password for email={}", email);
             throw new UnauthorizedException("Invalid email or password");
         }
@@ -86,12 +83,12 @@ public class AuthService {
     }
 
     public UserInfoResponse getCurrentUser(String email) {
+        String normalizedEmail = normalizeEmail(email);
 
-        log.info("Fetching current user for email={}", email);
+        log.info("Fetching current user for email={}", normalizedEmail);
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return new UserInfoResponse(
                 user.getId(),
@@ -99,5 +96,21 @@ public class AuthService {
                 user.getEmail(),
                 user.getRole().name()
         );
+    }
+
+    private String normalizeEmail(String email) {
+        return email.toLowerCase().trim();
+    }
+
+    private Role resolveRole(String role) {
+        if (role == null || role.isBlank()) {
+            return Role.STUDENT;
+        }
+
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("Invalid role. Allowed roles are USER, ADMIN, STUDENT, INSTRUCTOR");
+        }
     }
 }

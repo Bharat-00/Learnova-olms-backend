@@ -1,14 +1,16 @@
 package com.learnova.lesson.service;
 
 import com.learnova.lesson.client.CourseClient;
-import com.learnova.lesson.dto.*;
+import com.learnova.lesson.dto.CourseResponse;
+import com.learnova.lesson.dto.CreateLessonRequest;
+import com.learnova.lesson.dto.LessonResponse;
+import com.learnova.lesson.dto.UpdateLessonRequest;
 import com.learnova.lesson.entity.Lesson;
-import com.learnova.lesson.exception.*;
+import com.learnova.lesson.exception.ForbiddenException;
+import com.learnova.lesson.exception.ResourceNotFoundException;
 import com.learnova.lesson.repository.LessonRepository;
 import com.learnova.lesson.security.SecurityContextUtil;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,31 +23,20 @@ public class LessonService {
     private final CourseClient courseClient;
     private final SecurityContextUtil securityContextUtil;
 
-    public LessonResponse createLesson(
-            CreateLessonRequest request,
-            String userEmail,
-            String role) {
+    public LessonResponse createLesson(CreateLessonRequest request, String userEmail, String role) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        String resolvedRole = securityContextUtil.resolveRole(role);
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+        securityContextUtil.validateInstructorOrAdmin(resolvedRole);
 
-        securityContextUtil.validateInstructorOrAdmin(role);
+        CourseResponse course = courseClient.getCourseById(request.getCourseId());
 
-        CourseResponse course =
-                courseClient.getCourseById(request.getCourseId());
-
-        boolean isOwner =
-                course.getInstructorEmail()
-                        .equalsIgnoreCase(email);
-
-        boolean isAdmin =
-                role.equalsIgnoreCase("ADMIN");
+        String instructorEmail = course.getInstructorEmail();
+        boolean isOwner = instructorEmail == null || instructorEmail.isBlank() || instructorEmail.equalsIgnoreCase(email);
+        boolean isAdmin = resolvedRole.equalsIgnoreCase("ADMIN");
 
         if (!isOwner && !isAdmin) {
-
-            throw new ForbiddenException(
-                    "You cannot add lessons to this course"
-            );
+            throw new ForbiddenException("You cannot add lessons to this course");
         }
 
         Lesson lesson = Lesson.builder()
@@ -58,63 +49,46 @@ public class LessonService {
                 .instructorEmail(email)
                 .build();
 
-        Lesson savedLesson =
-                lessonRepository.save(lesson);
+        return mapToResponse(lessonRepository.save(lesson));
+    }
 
-        return mapToResponse(savedLesson);
+    public List<LessonResponse> getAllLessons() {
+        return lessonRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public List<LessonResponse> getCourseLessons(Long courseId) {
-
-        return lessonRepository
-                .findByCourseIdOrderByLessonOrderAsc(courseId)
+        return lessonRepository.findByCourseIdOrderByLessonOrderAsc(courseId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     public LessonResponse getLessonById(Long id) {
-
-        Lesson lesson =
-                lessonRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Lesson not found"
-                                ));
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Lesson not found"));
 
         return mapToResponse(lesson);
     }
 
-    public LessonResponse updateLesson(
-            Long id,
-            UpdateLessonRequest request,
-            String userEmail,
-            String role) {
+    public LessonResponse updateLesson(Long id, UpdateLessonRequest request, String userEmail, String role) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        String resolvedRole = securityContextUtil.resolveRole(role);
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+        securityContextUtil.validateInstructorOrAdmin(resolvedRole);
 
-        securityContextUtil.validateInstructorOrAdmin(role);
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Lesson not found"));
 
-        Lesson lesson =
-                lessonRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Lesson not found"
-                                ));
-
-        boolean isOwner =
-                lesson.getInstructorEmail()
-                        .equalsIgnoreCase(email);
-
-        boolean isAdmin =
-                role.equalsIgnoreCase("ADMIN");
+        boolean isOwner = lesson.getInstructorEmail() == null
+                || lesson.getInstructorEmail().isBlank()
+                || lesson.getInstructorEmail().equalsIgnoreCase(email);
+        boolean isAdmin = resolvedRole.equalsIgnoreCase("ADMIN");
 
         if (!isOwner && !isAdmin) {
-
-            throw new ForbiddenException(
-                    "You cannot update this lesson"
-            );
+            throw new ForbiddenException("You cannot update this lesson");
         }
 
         lesson.setTitle(request.getTitle());
@@ -123,48 +97,31 @@ public class LessonService {
         lesson.setResourceUrl(request.getResourceUrl());
         lesson.setLessonOrder(request.getLessonOrder());
 
-        Lesson updatedLesson =
-                lessonRepository.save(lesson);
-
-        return mapToResponse(updatedLesson);
+        return mapToResponse(lessonRepository.save(lesson));
     }
 
-    public void deleteLesson(
-            Long id,
-            String userEmail,
-            String role) {
+    public void deleteLesson(Long id, String userEmail, String role) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        String resolvedRole = securityContextUtil.resolveRole(role);
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+        securityContextUtil.validateInstructorOrAdmin(resolvedRole);
 
-        securityContextUtil.validateInstructorOrAdmin(role);
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Lesson not found"));
 
-        Lesson lesson =
-                lessonRepository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Lesson not found"
-                                ));
-
-        boolean isOwner =
-                lesson.getInstructorEmail()
-                        .equalsIgnoreCase(email);
-
-        boolean isAdmin =
-                role.equalsIgnoreCase("ADMIN");
+        boolean isOwner = lesson.getInstructorEmail() == null
+                || lesson.getInstructorEmail().isBlank()
+                || lesson.getInstructorEmail().equalsIgnoreCase(email);
+        boolean isAdmin = resolvedRole.equalsIgnoreCase("ADMIN");
 
         if (!isOwner && !isAdmin) {
-
-            throw new ForbiddenException(
-                    "You cannot delete this lesson"
-            );
+            throw new ForbiddenException("You cannot delete this lesson");
         }
 
         lessonRepository.delete(lesson);
     }
 
     private LessonResponse mapToResponse(Lesson lesson) {
-
         return LessonResponse.builder()
                 .id(lesson.getId())
                 .courseId(lesson.getCourseId())

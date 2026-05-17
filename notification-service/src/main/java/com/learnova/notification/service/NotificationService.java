@@ -1,9 +1,9 @@
 package com.learnova.notification.service;
 
-import java.util.List;
-
 import com.learnova.notification.dto.NotificationRequest;
 import com.learnova.notification.entity.Notification;
+
+import java.util.List;
 
 public interface NotificationService {
 
@@ -12,6 +12,8 @@ public interface NotificationService {
     List<Notification> getAllNotifications();
 
     List<Notification> getNotificationsByUserEmail(String email);
+
+    List<Notification> getNotificationsByUserId(Long userId);
 
     Notification markAsRead(Long id);
 

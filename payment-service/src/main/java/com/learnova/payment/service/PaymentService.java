@@ -39,7 +39,7 @@ public class PaymentService {
 
         CourseResponse course = courseClient.getCourseById(request.getCourseId());
 
-        if (course.getPublished() == null || !course.getPublished()) {
+        if (Boolean.FALSE.equals(course.getPublished())) {
             throw new BadRequestException("Payment cannot be created for unpublished course");
         }
 
@@ -58,7 +58,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .userEmail(email)
                 .courseId(course.getId())
-                .amount(course.getPrice())
+                .amount(course.getPrice() == null ? 0.0 : course.getPrice())
                 .transactionId("TXN-" + UUID.randomUUID())
                 .status(PaymentStatus.PENDING)
                 .build();
@@ -83,6 +83,13 @@ public class PaymentService {
         }
 
         return mapToResponse(savedPayment);
+    }
+
+    public List<PaymentResponse> getAllPayments() {
+        return paymentRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public List<PaymentResponse> getMyPayments(String userEmail) {

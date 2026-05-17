@@ -4,15 +4,14 @@ import com.learnova.progress.client.LessonClient;
 import com.learnova.progress.dto.CourseProgressResponse;
 import com.learnova.progress.dto.LessonProgressResponse;
 import com.learnova.progress.dto.LessonResponse;
+import com.learnova.progress.dto.ProgressUpdateRequest;
 import com.learnova.progress.entity.CourseProgress;
 import com.learnova.progress.entity.LessonProgress;
 import com.learnova.progress.exception.BadRequestException;
 import com.learnova.progress.repository.CourseProgressRepository;
 import com.learnova.progress.repository.LessonProgressRepository;
 import com.learnova.progress.security.SecurityContextUtil;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,63 +25,84 @@ public class ProgressService {
     private final LessonClient lessonClient;
     private final SecurityContextUtil securityContextUtil;
 
-    public LessonProgressResponse markLessonCompleted(
-            Long courseId,
-            Long lessonId,
-            String userEmail) {
+    public LessonProgressResponse markLessonCompleted(Long courseId, Long lessonId, String userEmail) {
+        return markLessonCompleted(null, courseId, lessonId, userEmail);
+    }
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+    public LessonProgressResponse markLessonCompleted(Long userId, Long courseId, Long lessonId, String userEmail) {
+        if (courseId == null) {
+            throw new BadRequestException("Course id is required");
+        }
+        if (lessonId == null) {
+            throw new BadRequestException("Lesson id is required");
+        }
 
-        boolean alreadyCompleted =
-                lessonProgressRepository
-                        .existsByUserEmailAndLessonId(email, lessonId);
+        String email = securityContextUtil.getUserEmail(userEmail, userId);
+
+        boolean alreadyCompleted = userId != null
+                ? lessonProgressRepository.existsByUserIdAndLessonId(userId, lessonId)
+                : lessonProgressRepository.existsByUserEmailAndLessonId(email, lessonId);
 
         if (alreadyCompleted) {
-            throw new BadRequestException(
-                    "Lesson already completed"
-            );
+            return lessonProgressRepository.findByUserEmailAndLessonId(email, lessonId)
+                    .or(() -> userId == null ? java.util.Optional.empty() : lessonProgressRepository.findByUserIdAndLessonId(userId, lessonId))
+                    .map(this::mapLessonProgress)
+                    .orElseThrow(() -> new BadRequestException("Lesson already completed"));
         }
 
         LessonProgress progress = LessonProgress.builder()
+                .userId(userId)
                 .userEmail(email)
                 .courseId(courseId)
                 .lessonId(lessonId)
                 .completed(true)
                 .build();
 
-        LessonProgress savedProgress =
-                lessonProgressRepository.save(progress);
-
-        updateCourseProgress(email, courseId);
-
+        LessonProgress savedProgress = lessonProgressRepository.save(progress);
+        updateCourseProgress(email, userId, courseId);
         return mapLessonProgress(savedProgress);
     }
 
-    public CourseProgressResponse getCourseProgress(
-            Long courseId,
-            String userEmail) {
+    public LessonProgressResponse updateProgress(ProgressUpdateRequest request, String headerEmail) {
+        if (request == null) {
+            throw new BadRequestException("Progress request is required");
+        }
+        String email = request.getUserEmail() != null ? request.getUserEmail() : headerEmail;
+        return markLessonCompleted(request.getUserId(), request.getCourseId(), request.getLessonId(), email);
+    }
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+    public CourseProgressResponse getCourseProgress(Long courseId, String userEmail) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        updateCourseProgress(email, null, courseId);
 
-        updateCourseProgress(email, courseId);
-
-        CourseProgress progress =
-                courseProgressRepository
-                        .findByUserEmailAndCourseId(email, courseId)
-                        .orElseGet(() -> createEmptyProgress(email, courseId));
+        CourseProgress progress = courseProgressRepository
+                .findByUserEmailAndCourseId(email, courseId)
+                .orElseGet(() -> createEmptyProgress(email, null, courseId));
 
         return mapCourseProgress(progress);
     }
 
-    public List<LessonProgressResponse> getCompletedLessons(
-            Long courseId,
-            String userEmail) {
+    public CourseProgressResponse getCourseProgressByUserId(Long userId, Long courseId) {
+        String email = securityContextUtil.getUserEmail(null, userId);
+        updateCourseProgress(email, userId, courseId);
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
+        CourseProgress progress = courseProgressRepository
+                .findByUserIdAndCourseId(userId, courseId)
+                .or(() -> courseProgressRepository.findByUserEmailAndCourseId(email, courseId))
+                .orElseGet(() -> createEmptyProgress(email, userId, courseId));
 
+        return mapCourseProgress(progress);
+    }
+
+    public List<CourseProgressResponse> getMyProgress(String userEmail) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        return courseProgressRepository.findByUserEmail(email).stream()
+                .map(this::mapCourseProgress)
+                .toList();
+    }
+
+    public List<LessonProgressResponse> getCompletedLessons(Long courseId, String userEmail) {
+        String email = securityContextUtil.getUserEmail(userEmail);
         return lessonProgressRepository
                 .findByUserEmailAndCourseId(email, courseId)
                 .stream()
@@ -90,42 +110,37 @@ public class ProgressService {
                 .toList();
     }
 
-    private void updateCourseProgress(
-            String userEmail,
-            Long courseId) {
+    private void updateCourseProgress(String userEmail, Long userId, Long courseId) {
+        if (courseId == null) {
+            throw new BadRequestException("Course id is required");
+        }
 
-        List<LessonResponse> lessons =
-                lessonClient.getLessonsByCourseId(courseId);
+        List<LessonResponse> lessons;
+        try {
+            lessons = lessonClient.getLessonsByCourseId(courseId);
+        } catch (Exception ex) {
+            lessons = List.of();
+        }
 
         int totalLessons = lessons.size();
 
-        long completedLessons =
-                lessonProgressRepository
-                        .countByUserEmailAndCourseIdAndCompletedTrue(
-                                userEmail,
-                                courseId
-                        );
+        long completedLessons = userId != null
+                ? lessonProgressRepository.countByUserIdAndCourseIdAndCompletedTrue(userId, courseId)
+                : lessonProgressRepository.countByUserEmailAndCourseIdAndCompletedTrue(userEmail, courseId);
 
-        double percentage = 0.0;
+        double percentage = totalLessons > 0 ? ((double) completedLessons / totalLessons) * 100 : 0.0;
+        boolean certificateEligible = percentage >= 80;
 
-        if (totalLessons > 0) {
-            percentage =
-                    ((double) completedLessons / totalLessons) * 100;
-        }
+        CourseProgress progress = userId != null
+                ? courseProgressRepository.findByUserIdAndCourseId(userId, courseId)
+                    .orElseGet(() -> courseProgressRepository.findByUserEmailAndCourseId(userEmail, courseId)
+                        .orElse(CourseProgress.builder().userId(userId).userEmail(userEmail).courseId(courseId).build()))
+                : courseProgressRepository.findByUserEmailAndCourseId(userEmail, courseId)
+                    .orElse(CourseProgress.builder().userEmail(userEmail).courseId(courseId).build());
 
-        boolean certificateEligible =
-                percentage >= 80;
-
-        CourseProgress progress =
-                courseProgressRepository
-                        .findByUserEmailAndCourseId(userEmail, courseId)
-                        .orElse(
-                                CourseProgress.builder()
-                                        .userEmail(userEmail)
-                                        .courseId(courseId)
-                                        .build()
-                        );
-
+        progress.setUserId(userId != null ? userId : progress.getUserId());
+        progress.setUserEmail(userEmail);
+        progress.setCourseId(courseId);
         progress.setTotalLessons(totalLessons);
         progress.setCompletedLessons((int) completedLessons);
         progress.setCompletionPercentage(percentage);
@@ -134,11 +149,9 @@ public class ProgressService {
         courseProgressRepository.save(progress);
     }
 
-    private CourseProgress createEmptyProgress(
-            String userEmail,
-            Long courseId) {
-
+    private CourseProgress createEmptyProgress(String userEmail, Long userId, Long courseId) {
         return CourseProgress.builder()
+                .userId(userId)
                 .userEmail(userEmail)
                 .courseId(courseId)
                 .totalLessons(0)
@@ -148,11 +161,10 @@ public class ProgressService {
                 .build();
     }
 
-    private LessonProgressResponse mapLessonProgress(
-            LessonProgress progress) {
-
+    private LessonProgressResponse mapLessonProgress(LessonProgress progress) {
         return LessonProgressResponse.builder()
                 .id(progress.getId())
+                .userId(progress.getUserId())
                 .userEmail(progress.getUserEmail())
                 .courseId(progress.getCourseId())
                 .lessonId(progress.getLessonId())
@@ -161,17 +173,18 @@ public class ProgressService {
                 .build();
     }
 
-    private CourseProgressResponse mapCourseProgress(
-            CourseProgress progress) {
-
+    private CourseProgressResponse mapCourseProgress(CourseProgress progress) {
+        boolean completed = progress.getCompletionPercentage() != null && progress.getCompletionPercentage() >= 100.0;
         return CourseProgressResponse.builder()
                 .id(progress.getId())
+                .userId(progress.getUserId())
                 .userEmail(progress.getUserEmail())
                 .courseId(progress.getCourseId())
                 .totalLessons(progress.getTotalLessons())
                 .completedLessons(progress.getCompletedLessons())
                 .completionPercentage(progress.getCompletionPercentage())
                 .certificateEligible(progress.getCertificateEligible())
+                .completed(completed)
                 .updatedAt(progress.getUpdatedAt())
                 .build();
     }

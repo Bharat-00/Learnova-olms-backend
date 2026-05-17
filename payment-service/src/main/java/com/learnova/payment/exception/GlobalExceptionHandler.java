@@ -1,12 +1,14 @@
 package com.learnova.payment.exception;
 
-import java.time.LocalDateTime;
-
+import feign.FeignException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.time.LocalDateTime;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -28,7 +30,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingRequestHeaderException.class)
     public ResponseEntity<ErrorResponse> handleMissingHeader(MissingRequestHeaderException ex) {
-        return build("User email is missing", HttpStatus.UNAUTHORIZED);
+        return build("Required request header is missing", HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().isEmpty()
+                ? "Validation failed"
+                : ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+        return build(message, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(FeignException.NotFound.class)
+    public ResponseEntity<ErrorResponse> handleFeignNotFound(FeignException.NotFound ex) {
+        return build("Required remote resource was not found", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ErrorResponse> handleFeign(FeignException ex) {
+        return build("Remote service error: " + ex.status(), HttpStatus.BAD_GATEWAY);
     }
 
     @ExceptionHandler(Exception.class)
@@ -37,7 +57,6 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> build(String message, HttpStatus status) {
-
         ErrorResponse response = ErrorResponse.builder()
                 .message(message)
                 .status(status.value())

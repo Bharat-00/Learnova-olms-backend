@@ -8,9 +8,7 @@ import com.learnova.enrollment.exception.BadRequestException;
 import com.learnova.enrollment.exception.ResourceNotFoundException;
 import com.learnova.enrollment.repository.EnrollmentRepository;
 import com.learnova.enrollment.security.SecurityContextUtil;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,29 +22,20 @@ public class EnrollmentService {
     private final SecurityContextUtil securityContextUtil;
 
     public EnrollmentResponse enrollInCourse(String userEmail, Long courseId) {
+        String email = securityContextUtil.getUserEmail(userEmail);
 
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
-
-        boolean alreadyEnrolled =
-                enrollmentRepository.existsByUserEmailAndCourseId(
-                        email,
-                        courseId
-                );
-
+        boolean alreadyEnrolled = enrollmentRepository.existsByUserEmailAndCourseId(email, courseId);
         if (alreadyEnrolled) {
-            throw new BadRequestException(
-                    "User already enrolled in this course"
-            );
+            throw new BadRequestException("User already enrolled in this course");
         }
 
-        CourseResponse course =
-                courseClient.getCourseById(courseId);
+        CourseResponse course = courseClient.getCourseById(courseId);
+        if (course == null || course.getId() == null) {
+            throw new ResourceNotFoundException("Course not found with id: " + courseId);
+        }
 
-        if (!course.getPublished()) {
-            throw new BadRequestException(
-                    "Course is not published yet"
-            );
+        if (Boolean.FALSE.equals(course.getPublished())) {
+            throw new BadRequestException("Course is not published yet");
         }
 
         Enrollment enrollment = Enrollment.builder()
@@ -55,41 +44,37 @@ public class EnrollmentService {
                 .courseTitle(course.getTitle())
                 .build();
 
-        Enrollment savedEnrollment =
-                enrollmentRepository.save(enrollment);
-
-        return mapToResponse(savedEnrollment);
+        return mapToResponse(enrollmentRepository.save(enrollment));
     }
 
     public List<EnrollmentResponse> getUserEnrollments(String userEmail) {
-
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
-
+        String email = securityContextUtil.getUserEmail(userEmail);
         return enrollmentRepository.findByUserEmail(email)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
+    public List<EnrollmentResponse> getCourseEnrollments(Long courseId) {
+        return enrollmentRepository.findByCourseId(courseId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public boolean isUserEnrolled(String userEmail, Long courseId) {
+        String email = securityContextUtil.getUserEmail(userEmail);
+        return enrollmentRepository.existsByUserEmailAndCourseId(email, courseId);
+    }
+
     public void unenrollFromCourse(String userEmail, Long courseId) {
-
-        String email =
-                securityContextUtil.getUserEmail(userEmail);
-
-        Enrollment enrollment =
-                enrollmentRepository
-                        .findByUserEmailAndCourseId(email, courseId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Enrollment not found"
-                                ));
-
+        String email = securityContextUtil.getUserEmail(userEmail);
+        Enrollment enrollment = enrollmentRepository.findByUserEmailAndCourseId(email, courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment not found"));
         enrollmentRepository.delete(enrollment);
     }
 
     private EnrollmentResponse mapToResponse(Enrollment enrollment) {
-
         return EnrollmentResponse.builder()
                 .id(enrollment.getId())
                 .userEmail(enrollment.getUserEmail())

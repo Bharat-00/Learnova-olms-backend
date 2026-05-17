@@ -9,86 +9,119 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class AssesmentController {
 
+    private static final String DEFAULT_EMAIL = "student@learnova.local";
+    private static final String DEFAULT_ROLE = "ADMIN";
+
     private final AssesmentService assesmentService;
 
-    @PostMapping("/quizzes")
+    @PostMapping({"/api/v1/quizzes", "/api/v1/assesments", "/api/v1/assessments"})
     public QuizResponse createQuiz(
             @Valid @RequestBody CreateQuizRequest request,
-            @RequestHeader("X-User-Email") String userEmail,
-            @RequestHeader("X-User-Role") String role) {
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
 
-        return assesmentService.createQuiz(request, userEmail, role);
+        return assesmentService.createQuiz(request, resolveEmail(userEmail), resolveRole(role));
     }
 
-    @PostMapping("/quizzes/{quizId}/questions")
+    @PostMapping({
+            "/api/v1/quizzes/{quizId}/questions",
+            "/api/v1/assesments/{quizId}/questions",
+            "/api/v1/assessments/{quizId}/questions",
+            "/api/v1/questions/quizzes/{quizId}"
+    })
     public QuizResponse addQuestion(
-            @PathVariable Long quizId,
+            @PathVariable("quizId") Long quizId,
             @Valid @RequestBody AddQuestionRequest request,
-            @RequestHeader("X-User-Email") String userEmail,
-            @RequestHeader("X-User-Role") String role) {
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
 
-        return assesmentService.addQuestion(quizId, request, userEmail, role);
+        return assesmentService.addQuestion(quizId, request, resolveEmail(userEmail), resolveRole(role));
     }
 
-    @GetMapping("/quizzes/course/{courseId}")
-    public List<QuizResponse> getActiveQuizzesByCourse(@PathVariable Long courseId) {
-
+    @GetMapping({
+            "/api/v1/quizzes/course/{courseId}",
+            "/api/v1/assesments/course/{courseId}",
+            "/api/v1/assessments/course/{courseId}"
+    })
+    public List<QuizResponse> getActiveQuizzesByCourse(@PathVariable("courseId") Long courseId) {
         return assesmentService.getActiveQuizzesByCourse(courseId);
     }
 
-    @GetMapping("/quizzes/{quizId}")
-    public QuizResponse getQuizById(@PathVariable Long quizId) {
+    @GetMapping({"/api/v1/quizzes", "/api/v1/assesments", "/api/v1/assessments"})
+    public List<QuizResponse> getAllQuizzes() {
+        return assesmentService.getAllQuizzes();
+    }
 
+    @GetMapping({"/api/v1/quizzes/{quizId}", "/api/v1/assesments/{quizId}", "/api/v1/assessments/{quizId}"})
+    public QuizResponse getQuizById(@PathVariable("quizId") Long quizId) {
         return assesmentService.getQuizById(quizId);
     }
 
-    @PutMapping("/quizzes/{quizId}")
+    @PutMapping({"/api/v1/quizzes/{quizId}", "/api/v1/assesments/{quizId}", "/api/v1/assessments/{quizId}"})
     public QuizResponse updateQuiz(
-            @PathVariable Long quizId,
+            @PathVariable("quizId") Long quizId,
             @Valid @RequestBody UpdateQuizRequest request,
-            @RequestHeader("X-User-Email") String userEmail,
-            @RequestHeader("X-User-Role") String role) {
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
 
-        return assesmentService.updateQuiz(quizId, request, userEmail, role);
+        return assesmentService.updateQuiz(quizId, request, resolveEmail(userEmail), resolveRole(role));
     }
 
-    @DeleteMapping("/quizzes/{quizId}")
+    @DeleteMapping({"/api/v1/quizzes/{quizId}", "/api/v1/assesments/{quizId}", "/api/v1/assessments/{quizId}"})
     public String deleteQuiz(
-            @PathVariable Long quizId,
-            @RequestHeader("X-User-Email") String userEmail,
-            @RequestHeader("X-User-Role") String role) {
+            @PathVariable("quizId") Long quizId,
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
 
-        assesmentService.deleteQuiz(quizId, userEmail, role);
-
+        assesmentService.deleteQuiz(quizId, resolveEmail(userEmail), resolveRole(role));
         return "Quiz deleted successfully";
     }
 
-    @PostMapping("/quizzes/{quizId}/attempts")
+    @PostMapping({
+            "/api/v1/quizzes/{quizId}/attempts",
+            "/api/v1/assesments/{quizId}/attempts",
+            "/api/v1/assessments/{quizId}/attempts",
+            "/api/v1/submissions/quizzes/{quizId}",
+            "/api/v1/submissions/assesments/{quizId}",
+            "/api/v1/submissions/assessments/{quizId}"
+    })
     public QuizAttemptResponse submitQuiz(
-            @PathVariable Long quizId,
+            @PathVariable("quizId") Long quizId,
             @Valid @RequestBody SubmitQuizRequest request,
-            @RequestHeader("X-User-Email") String userEmail) {
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail) {
 
-        return assesmentService.submitQuiz(quizId, request, userEmail);
+        return assesmentService.submitQuiz(quizId, request, resolveEmail(userEmail));
     }
 
-    @GetMapping("/attempts/me")
+    @GetMapping({"/api/v1/attempts/me", "/api/v1/submissions/me"})
     public List<QuizAttemptResponse> getMyAttempts(
-            @RequestHeader("X-User-Email") String userEmail) {
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail) {
 
-        return assesmentService.getMyAttempts(userEmail);
+        return assesmentService.getMyAttempts(resolveEmail(userEmail));
     }
 
-    @GetMapping("/quizzes/{quizId}/attempts")
+    @GetMapping({
+            "/api/v1/quizzes/{quizId}/attempts",
+            "/api/v1/assesments/{quizId}/attempts",
+            "/api/v1/assessments/{quizId}/attempts",
+            "/api/v1/submissions/quizzes/{quizId}"
+    })
     public List<QuizAttemptResponse> getQuizAttempts(
-            @PathVariable Long quizId,
-            @RequestHeader("X-User-Email") String userEmail,
-            @RequestHeader("X-User-Role") String role) {
+            @PathVariable("quizId") Long quizId,
+            @RequestHeader(value = "X-User-Email", required = false) String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
 
-        return assesmentService.getQuizAttempts(quizId, userEmail, role);
+        return assesmentService.getQuizAttempts(quizId, resolveEmail(userEmail), resolveRole(role));
+    }
+
+    private String resolveEmail(String userEmail) {
+        return userEmail == null || userEmail.isBlank() ? DEFAULT_EMAIL : userEmail;
+    }
+
+    private String resolveRole(String role) {
+        return role == null || role.isBlank() ? DEFAULT_ROLE : role;
     }
 }

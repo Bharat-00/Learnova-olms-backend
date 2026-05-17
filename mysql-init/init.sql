@@ -1,0 +1,11 @@
+CREATE DATABASE IF NOT EXISTS learnova_auth_db;
+CREATE DATABASE IF NOT EXISTS learnova_user_db;
+CREATE DATABASE IF NOT EXISTS learnova_course_db;
+CREATE DATABASE IF NOT EXISTS learnova_enrollment_db;
+CREATE DATABASE IF NOT EXISTS learnova_lesson_db;
+CREATE DATABASE IF NOT EXISTS learnova_assesment_db;
+CREATE DATABASE IF NOT EXISTS learnova_progress_db;
+CREATE DATABASE IF NOT EXISTS learnova_payment_db;
+CREATE DATABASE IF NOT EXISTS learnova_discussion_db;
+CREATE DATABASE IF NOT EXISTS learnova_notification_db;
+CREATE DATABASE IF NOT EXISTS learnova_certificate_db;

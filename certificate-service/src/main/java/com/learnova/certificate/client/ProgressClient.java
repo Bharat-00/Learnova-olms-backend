@@ -10,7 +10,7 @@ public interface ProgressClient {
 
     @GetMapping("/api/progress/user/{userId}/course/{courseId}")
     ProgressResponse getProgress(
-            @PathVariable Long userId,
-            @PathVariable Long courseId
+            @PathVariable("userId") Long userId,
+            @PathVariable("courseId") Long courseId
     );
 }

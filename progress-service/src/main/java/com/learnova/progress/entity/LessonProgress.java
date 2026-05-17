@@ -23,6 +23,8 @@ public class LessonProgress {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long userId;
+
     private String userEmail;
 
     private Long courseId;
@@ -38,7 +40,6 @@ public class LessonProgress {
         if (completed == null) {
             completed = true;
         }
-
         if (completedAt == null) {
             completedAt = LocalDateTime.now();
         }

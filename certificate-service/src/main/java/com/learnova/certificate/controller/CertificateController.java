@@ -23,44 +23,74 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/certificates")
+@RequestMapping({"/api/v1/certificates", "/api/certificates"})
 @Tag(name = "Certificate Controller", description = "APIs for certificate management")
 public class CertificateController {
 
     private final CertificateService certificateService;
+
+    @GetMapping
+    @Operation(summary = "Get all certificates")
+    public ResponseEntity<ApiResponse<List<Certificate>>> getAllCertificates() {
+        return ResponseEntity.ok(
+                ApiResponse.<List<Certificate>>builder()
+                        .success(true)
+                        .message("Certificates fetched successfully")
+                        .data(certificateService.getAllCertificates())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
 
     @PostMapping("/generate")
     @Operation(summary = "Generate course completion certificate")
     public ResponseEntity<ApiResponse<Certificate>> generateCertificate(
             @Valid @RequestBody CertificateRequest request
     ) {
-
         log.info("Generating certificate for userId={} and courseId={}",
                 request.getUserId(),
                 request.getCourseId());
 
-        Certificate certificate =
-                certificateService.generateCertificate(request);
+        Certificate certificate = certificateService.generateCertificate(request);
 
         return ResponseEntity.status(201)
-                .body(
-                        ApiResponse.<Certificate>builder()
-                                .success(true)
-                                .message("Certificate generated successfully")
-                                .data(certificate)
-                                .timestamp(LocalDateTime.now())
-                                .build()
-                );
+                .body(ApiResponse.<Certificate>builder()
+                        .success(true)
+                        .message("Certificate generated successfully")
+                        .data(certificate)
+                        .timestamp(LocalDateTime.now())
+                        .build());
+    }
+
+    @PostMapping
+    @Operation(summary = "Generate course completion certificate")
+    public ResponseEntity<ApiResponse<Certificate>> createCertificate(
+            @Valid @RequestBody CertificateRequest request
+    ) {
+        return generateCertificate(request);
+    }
+
+    @GetMapping("/{certificateId}")
+    @Operation(summary = "Get certificate by ID")
+    public ResponseEntity<ApiResponse<Certificate>> getCertificateById(
+            @PathVariable("certificateId") Long certificateId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.<Certificate>builder()
+                        .success(true)
+                        .message("Certificate fetched successfully")
+                        .data(certificateService.getCertificateById(certificateId))
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
     }
 
     @GetMapping("/user/{userId}")
     @Operation(summary = "Get certificates by user ID")
     public ResponseEntity<ApiResponse<List<Certificate>>> getCertificatesByUserId(
-            @PathVariable Long userId
+            @PathVariable("userId") Long userId
     ) {
-
-        List<Certificate> certificates =
-                certificateService.getCertificatesByUserId(userId);
+        List<Certificate> certificates = certificateService.getCertificatesByUserId(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<List<Certificate>>builder()
@@ -72,22 +102,24 @@ public class CertificateController {
         );
     }
 
+    @GetMapping("/users/{userId}")
+    @Operation(summary = "Get certificates by user ID")
+    public ResponseEntity<ApiResponse<List<Certificate>>> getCertificatesByUser(
+            @PathVariable("userId") Long userId
+    ) {
+        return getCertificatesByUserId(userId);
+    }
+
     @GetMapping("/download/{certificateId}")
     @Operation(summary = "Download certificate PDF")
     public ResponseEntity<Resource> downloadCertificate(
-            @PathVariable Long certificateId
+            @PathVariable("certificateId") Long certificateId
     ) throws Exception {
-
-        Certificate certificate =
-                certificateService.getCertificateById(certificateId);
-
+        Certificate certificate = certificateService.getCertificateById(certificateId);
         Path filePath = Path.of(certificate.getFilePath());
 
-        Resource resource =
-                new org.springframework.core.io.UrlResource(filePath.toUri());
-
-        String contentType =
-                Files.probeContentType(filePath);
+        Resource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
+        String contentType = Files.probeContentType(filePath);
 
         if (contentType == null) {
             contentType = "application/pdf";
@@ -95,11 +127,8 @@ public class CertificateController {
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" +
-                                certificate.getFileName() + "\""
-                )
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + certificate.getFileName() + "\"")
                 .body(resource);
     }
 }

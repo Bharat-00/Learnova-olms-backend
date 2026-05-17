@@ -6,6 +6,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -19,51 +20,38 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final JwtUtil jwtUtil;
 
     private static final String[] PUBLIC_ROUTES = {
-            "/api/auth/login",
-            "/api/auth/register",
-            "/eureka",
+            "/api/v1/auth/",
+            "/api/auth/",
             "/actuator",
             "/swagger-ui",
+            "/swagger-ui.html",
             "/v3/api-docs"
     };
 
     @Override
-    public Mono<Void> filter(
-            ServerWebExchange exchange,
-            GatewayFilterChain chain
-    ) {
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
 
-        String path = exchange.getRequest()
-                .getURI()
-                .getPath();
-
-        if (isPublicRoute(path)) {
+        if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS || isPublicRoute(path)) {
             return chain.filter(exchange);
         }
 
-        String authHeader = exchange.getRequest()
-                .getHeaders()
-                .getFirst(HttpHeaders.AUTHORIZATION);
+        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader == null || authHeader.isBlank()) {
+            return chain.filter(exchange);
+        }
 
-            log.error("Missing authorization header");
-
-            exchange.getResponse()
-                    .setStatusCode(HttpStatus.UNAUTHORIZED);
-
+        if (!authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
         String token = authHeader.substring(7);
 
         if (!jwtUtil.validateToken(token)) {
-
-            log.error("Invalid JWT token");
-
-            exchange.getResponse()
-                    .setStatusCode(HttpStatus.UNAUTHORIZED);
-
+            log.warn("Invalid JWT token for path {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
@@ -71,13 +59,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublicRoute(String path) {
-
         for (String route : PUBLIC_ROUTES) {
-            if (path.contains(route)) {
+            if (path.startsWith(route)) {
                 return true;
             }
         }
-
         return false;
     }
 

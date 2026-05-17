@@ -23,6 +23,8 @@ public class CourseProgress {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long userId;
+
     private String userEmail;
 
     private Long courseId;
@@ -40,6 +42,18 @@ public class CourseProgress {
     @PrePersist
     @PreUpdate
     public void onUpdate() {
+        if (totalLessons == null) {
+            totalLessons = 0;
+        }
+        if (completedLessons == null) {
+            completedLessons = 0;
+        }
+        if (completionPercentage == null) {
+            completionPercentage = 0.0;
+        }
+        if (certificateEligible == null) {
+            certificateEligible = false;
+        }
         updatedAt = LocalDateTime.now();
     }
 }

@@ -6,60 +6,70 @@ spring:
     name: certificate-service
 
   datasource:
-    url: jdbc:mysql://localhost:3317/learnova_certificate_db
-    username: root
-    password: Bharat_007
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/learnova_certificate_db}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:Bharat_007}
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
-
     show-sql: true
-
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
 
 eureka:
   client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
 
 app:
   jwt:
-    secret: learnova_super_secret_key_for_jwt_validation_2026
-
+    secret: ${JWT_SECRET:learnova_super_secret_key_2026_learnova_super_secret_key_2026}
   certificate:
-    storage-path: certificates
+    storage-path: ${CERTIFICATE_STORAGE_PATH:certificates}
 
 rabbitmq:
-  exchange: learnova.exchange
-  certificate-queue: certificate.queue
-  certificate-routing-key: certificate.generated
-  notification-routing-key: notification.created
+  exchange: ${RABBITMQ_EXCHANGE:learnova.exchange}
+  certificate-queue: ${RABBITMQ_CERTIFICATE_QUEUE:certificate.queue}
+  certificate-routing-key: ${RABBITMQ_CERTIFICATE_ROUTING_KEY:certificate.generated}
+  notification-queue: ${RABBITMQ_NOTIFICATION_QUEUE:notification.queue}
+  notification-routing-key: ${RABBITMQ_NOTIFICATION_ROUTING_KEY:notification.created}
 
 management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
 
 springdoc:
+  api-docs:
+    path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
 
 logging:
   level:
-    com.learnova.certificate: DEBUG
-
+    com.learnova.certificate: INFO

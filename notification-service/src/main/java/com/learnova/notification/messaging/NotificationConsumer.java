@@ -1,5 +1,6 @@
 package com.learnova.notification.messaging;
 
+import com.learnova.notification.config.RabbitMQConfig;
 import com.learnova.notification.dto.NotificationEvent;
 import com.learnova.notification.entity.Notification;
 import com.learnova.notification.entity.NotificationType;
@@ -18,17 +19,13 @@ public class NotificationConsumer {
 
     private final NotificationRepository notificationRepository;
 
-    @RabbitListener(queues = "notification.queue")
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
     public void consume(NotificationEvent event) {
-
-        log.info(
-                "Received notification event for userId={} with title={}",
-                event.getUserId(),
-                event.getTitle()
-        );
+        log.info("Received notification event for userId={} with title={}", event.getUserId(), event.getTitle());
 
         Notification notification = Notification.builder()
                 .userId(event.getUserId())
+                .userEmail("bharat@gmail.com")
                 .title(event.getTitle())
                 .message(event.getMessage())
                 .type(NotificationType.INFO)
@@ -36,12 +33,7 @@ public class NotificationConsumer {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        Notification savedNotification =
-                notificationRepository.save(notification);
-
-        log.info(
-                "Notification stored successfully with id={}",
-                savedNotification.getId()
-        );
+        Notification savedNotification = notificationRepository.save(notification);
+        log.info("Notification stored successfully with id={}", savedNotification.getId());
     }
 }

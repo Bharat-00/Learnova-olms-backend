@@ -6,35 +6,35 @@ spring:
     name: auth-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/learnova_auth_db
-    username: root
-    password: Bharat_007
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/learnova_auth_db}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:Bharat_007}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
-
     show-sql: true
-
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
 jwt:
-  secret: learnova_super_secret_key_for_jwt_validation_2026
-  expiration: 86400000
+  secret: ${JWT_SECRET:learnova_super_secret_key_2026_learnova_super_secret_key_2026}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 eureka:
   client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:
     root: INFO
     com.learnova: DEBUG
-
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%level] [%thread] %logger{36} - %msg%n"
 
@@ -43,7 +43,6 @@ management:
     web:
       exposure:
         include: health,info,metrics
-
   endpoint:
     health:
       show-details: always
@@ -56,3 +55,5 @@ info:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

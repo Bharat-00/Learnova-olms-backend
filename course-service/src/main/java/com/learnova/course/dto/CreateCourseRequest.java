@@ -28,4 +28,6 @@ public class CreateCourseRequest {
     @NotNull(message = "Price is required")
     @PositiveOrZero(message = "Price must be valid")
     private Double price;
+
+    private String instructorEmail;
 }
